@@ -107,6 +107,7 @@ fn main() {
 fn parse_inline_formatting(line: &str) -> String {
     let mut result = String::new();
     let mut chars = line.chars().peekable();
+    let mut in_inline_code = false;
 
     while let Some(c) = chars.next() {
         if c == '*' {
@@ -156,9 +157,21 @@ fn parse_inline_formatting(line: &str) -> String {
                     link_text.push(inner_c);
                 }
             }
+        } else if c == '`' {
+            if in_inline_code {
+                result.push_str("</code>");
+                in_inline_code = false;
+            } else {
+                result.push_str("<code>");
+                in_inline_code = true;
+            }
         } else {
             result.push(c);
         }
+    }
+
+    if in_inline_code {
+        result.push_str("</code>");
     }
     result
 }

@@ -6,4 +6,3 @@
 
 - run bold and italic inside headings content.
 - blockquote only supports singleline
-- handle inline code
