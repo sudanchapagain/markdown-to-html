@@ -21,7 +21,13 @@ fn main() {
 
     for line in reader.lines() {
         let line = line.unwrap();
-        let line = line.trim().to_string();
+        let line = line.to_string();
+
+        let line = if !in_code_block {
+            line.trim()
+        } else {
+            &line
+        };
 
         if line.is_empty() {
             if in_list {
