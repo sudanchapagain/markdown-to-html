@@ -6,3 +6,4 @@
 
 - run bold and italic inside headings content.
 - blockquote only supports singleline
+- not safe. string is not converted to html character entity.
