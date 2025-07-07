@@ -62,10 +62,16 @@ fn main() {
                     break;
                 }
             }
-            let tag = format!("h{}", count);
-            html.push_str(&format!("<{}>{}</{}>\n", tag, &line[count..].trim(), tag));
+
+            if count <= 6 {
+                let tag = format!("h{}", count);
+                html.push_str(&format!("<{}>{}</{}>\n", tag, &line[count..].trim(), tag));
+            } else {
+                html.push_str(&format!("<p>{}</p>\n", line.trim()));
+            }
             continue;
         }
+
 
         if line.starts_with("* ") || line.starts_with("- ") {
             if !in_list {
