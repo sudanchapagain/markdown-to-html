@@ -1,8 +1,11 @@
-<div align="center">
-  <h1>Markdown to HTML</h1>
-</div>
+Markdown to HTML
+================
 
-### TODO won't do.
+TODO but will not do
+--------------------
 
-- run bold and italic inside headings content.
-- blockquote only supports singleline
+- doesn't do all of markdown and it's quirks
+- not safe. string is not converted to html character entity.
+- ordered list support
+- list inside of blockquotes
+- `<html><body>` & `</body></html>` wrappers by default.
