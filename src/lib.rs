@@ -1,17 +1,16 @@
-use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 3 {
-        eprintln!("Usage: md2html <markdown file> <html file>");
-        std::process::exit(1);
-    }
+use pyo3::prelude::*;
 
-    let markdown_file = &args[1];
-    let html_file = &args[2];
+#[pymodule]
+fn md2html(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(convert, m)?)?;
+    Ok(())
+}
 
+#[pyfunction]
+fn convert(markdown_file: String, return_file: bool, html_file: String) -> PyResult<String> {
     let file = File::open(markdown_file).expect("Unable to open file");
     let reader = BufReader::new(file);
 
@@ -26,11 +25,7 @@ fn main() {
         let line = line.unwrap();
         let line = line.to_string();
 
-        let line = if !in_code_block {
-            line.trim()
-        } else {
-            &line
-        };
+        let line = if !in_code_block { line.trim() } else { &line };
 
         if line.is_empty() {
             if in_list {
@@ -51,8 +46,8 @@ fn main() {
         }
 
         if in_code_block {
-            html.push_str(&line);
-            html.push_str("\n");
+            html.push_str(line);
+            html.push('\n');
             continue;
         }
 
@@ -68,7 +63,7 @@ fn main() {
 
             if count <= 6 {
                 let tag = format!("h{}", count);
-                let heading_content = parse_inline_formatting(&line[count..].trim());
+                let heading_content = parse_inline_formatting(line[count..].trim());
                 html.push_str(&format!("<{}>{}</{}>\n", tag, heading_content, tag));
             } else {
                 html.push_str(&format!("<p>{}</p>\n", line.trim()));
@@ -76,25 +71,21 @@ fn main() {
             continue;
         }
 
-
-        if line.starts_with("* ") || line.starts_with("- ") {
+        if let Some(stripped) = line.strip_prefix("* ").or_else(|| line.strip_prefix("- ")) {
             if !in_list {
                 html.push_str("<ul>\n");
                 in_list = true;
             }
-            html.push_str(&format!("<li>{}</li>\n", &line[2..].trim()));
+            html.push_str(&format!("<li>{}</li>\n", stripped.trim()));
             continue;
-        } else if in_list {
-            html.push_str("</ul>\n");
-            in_list = false;
         }
 
-        if line.starts_with("> ") {
+        if let Some(stripped) = line.strip_prefix("> ") {
             if !in_blockquote {
                 in_blockquote = true;
                 blockquote_buffer.clear();
             }
-            blockquote_buffer.push_str(&line[2..]);
+            blockquote_buffer.push_str(stripped);
             blockquote_buffer.push('\n');
             continue;
         } else if in_blockquote {
@@ -104,7 +95,7 @@ fn main() {
             in_blockquote = false;
         }
 
-        let parsed_line = parse_inline_formatting(&line);
+        let parsed_line = parse_inline_formatting(line);
 
         html.push_str(&format!("<p>{}</p>\n", parsed_line));
     }
@@ -119,9 +110,14 @@ fn main() {
         html.push_str("</blockquote>\n");
     }
 
-    let mut file = File::create(html_file).expect("Unable to create file");
-    file.write_all(html.as_bytes())
-        .expect("Unable to write data");
+    if return_file {
+        let mut file = File::create(html_file).expect("Unable to create file");
+        file.write_all(html.as_bytes())
+            .expect("Unable to write data");
+        Ok("wrote to file".to_string())
+    } else {
+        Ok(html)
+    }
 }
 
 fn parse_inline_formatting(line: &str) -> String {
@@ -145,7 +141,7 @@ fn parse_inline_formatting(line: &str) -> String {
                 }
             } else {
                 result.push_str("<em>");
-                while let Some(inner_c) = chars.next() {
+                for inner_c in chars.by_ref() {
                     if inner_c == '*' {
                         result.push_str("</em>");
                         break;
@@ -160,7 +156,7 @@ fn parse_inline_formatting(line: &str) -> String {
                 if inner_c == ']' {
                     if let Some('(') = chars.next() {
                         let mut link_url = String::new();
-                        while let Some(url_c) = chars.next() {
+                        for url_c in chars.by_ref() {
                             if url_c == ')' {
                                 result.push_str(&format!(
                                     "<a href=\"{}\">{}</a>",
